@@ -10,6 +10,9 @@ router.get("/", (req, res) => {
 	res.json({ api: "It's alive" });
 });
 
-
+router.get("/logout", (req, res) => {
+	req.session.destroy();
+	res.status(200).json({ message: "bye felicia" });
+});
 
 module.exports = router;

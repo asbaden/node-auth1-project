@@ -1,39 +1,53 @@
-const bcrypt = require("bcryptjs"); // <<<<<<<<<<<<<<<< npm i bcryptjs
 const router = require("express").Router();
-
+const bcrypt = require("bcryptjs");
 const Users = require("../users/users-model.js");
 
+
+
+
 router.post("/register", (req, res) => {
-  let user = req.body;
+	req.body.password = bcrypt.hashSync(req.body.password, 10);
 
-  const hash = bcrypt.hashSync(user.password, 8); // << 1
-
-  user.password = hash; // <<<<<<<<<<<<<<<<<<<<<<<<<<<< 2
-
-  Users.add(user)
-    .then(saved => {
-      res.status(201).json(saved);
-    })
-    .catch(error => {
-      res.status(500).json(error);
-    });
+	Users.add({ username: req.body.username, password: req.body.password })
+		.then(saved => {
+			res.status(201).json(saved);
+		})
+		.catch(error => {
+			res.status(500).json(error);
+		});
 });
 
 router.post("/login", (req, res) => {
-  let { username, password } = req.body;
+	Users.findBy({ username: req.body.username })
+		.first()
+		.then(user => {
+			console.log("found", user);
+			if (user && bcrypt.compareSync(req.body.password, user.password)) {
+				
 
-  Users.findBy({ username })
-    .first()
-    .then(user => {
-      if (user && bcrypt.compareSync(password, user.password)) {
-        res.status(200).json({ message: `Welcome ${user.username}!` });
-      } else {
-        res.status(401).json({ message: "Invalid Credentials" });
-      }
-    })
-    .catch(error => {
-      res.status(500).json(error);
-    });
+				req.session.loggedInUser = user;
+
+				res.status(200).json({ message: "Logged in" });
+			} else {
+				res.status(200).json({
+					message: "You shall not pass!"
+				});
+			}
+		})
+		.catch(error => {
+			res.status(500).json({ error: error.message });
+		});
 });
+
+function protected(req, res, next) {
+	if (req.session.loggedInUser) {
+	
+		next();
+	} else {
+		res.status(401).json({ message: "You shall not pass!" });
+	}
+}
+
+router.protected = protected;
 
 module.exports = router;
